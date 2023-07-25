@@ -4,6 +4,7 @@ namespace School_Management.Models
 {
     public class Student
     {
+        [Key]
         public int StudentId { get; set; }
         public string FirstName { get; set; }
         public string LastName { get; set; }
@@ -16,7 +17,7 @@ namespace School_Management.Models
         // Navigation Property
         public virtual Department Department { get; set; }
         // Collection Navigation Reference
-        public virtual ICollection<Course> Courses { get; set; }
+        public virtual ICollection<CourseStudent> CourseStudents { get; set; }
 
     }
 }
