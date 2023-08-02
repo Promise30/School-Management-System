@@ -89,6 +89,24 @@ namespace School_Management.Controllers
             return Ok("Student created successfully");
 
         }
+        [HttpDelete("{studentId}")]
+        public IActionResult DeleteStudent(int studentId)
+        {
+            if (!_studentsRepository.StudentExists(studentId))
+            {
+                return NotFound();
+            }
+            var studentToDelete = _studentsRepository.GetStudent(studentId);
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            if (!_studentsRepository.DeleteStudent(studentToDelete))
+            {
+                ModelState.AddModelError("", "Something went wrong while trying to delete the record.");
+            }
+            return NoContent();
+        }
     }
 
 }

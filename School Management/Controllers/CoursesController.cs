@@ -74,6 +74,24 @@ namespace School_Management.Controllers
             }
             return Ok("Course successfully created.");
         }
+        [HttpDelete("{courseId}")]
+        public IActionResult DeleteCourse(int courseId)
+        {
+            if (!_coursesRepository.CourseExists(courseId))
+            {
+                return NotFound();
+            }
+            var courseToDelete = _coursesRepository.GetCourse(courseId);
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            if (!_coursesRepository.DeleteCourse(courseToDelete))
+            {
+                ModelState.AddModelError("", "Something went wrong while trying to delete the record.");
+            }
+            return NoContent();
+        }
 
     }
 }

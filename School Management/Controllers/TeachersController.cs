@@ -81,6 +81,24 @@ namespace School_Management.Controllers
             }
             return Ok("Teacher successfully created.");
         }
+        [HttpDelete("{teacherId}")]
+        public IActionResult DeleteTeacher(int teacherId)
+        {
+            if (!_teachersRepository.TeacherExists(teacherId))
+            {
+                return NotFound();
+            }
+            var teacherToDelete = _teachersRepository.GetTeacher(teacherId);
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            if (!_teachersRepository.DeleteTeacher(teacherToDelete))
+            {
+                ModelState.AddModelError("", "Something went wrong while trying to delete the record.");
+            }
+            return NoContent();
+        }
 
     }
 }

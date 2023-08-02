@@ -74,8 +74,48 @@ namespace School_Management.Controllers
             }
             return Ok("Faculty created successfully.");
         }
+        [HttpPut("{facultyId}")]
+        public IActionResult UpdateFaculty(int facultyId, [FromBody] FacultyDTO updateFaculty)
+        {
+            if (updateFaculty == null || facultyId != updateFaculty.FacultyId)
+            {
+                return BadRequest(ModelState);
+            }
+            if (!_facultyRepository.FacultyExists(facultyId))
+            {
+                return NotFound();
+            }
+            if (!ModelState.IsValid)
+            {
+                return BadRequest();
+            }
+            var facultyMap = _mapper.Map<Faculty>(updateFaculty);
+            if (!_facultyRepository.UpdateFaculty(facultyMap))
+            {
+                ModelState.AddModelError("", "Something went wrong while trying to update the record.");
+                return StatusCode(500, ModelState);
+            }
+            return NoContent();
+        }
 
-
+        [HttpDelete("{facultyId}")]
+        public IActionResult DeleteDepartment(int facultyId)
+        {
+            if (!_facultyRepository.FacultyExists(facultyId))
+            {
+                return NotFound();
+            }
+            var facultyToDelete = _facultyRepository.GetFaculty(facultyId);
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            if (!_facultyRepository.DeleteFaculty(facultyToDelete))
+            {
+                ModelState.AddModelError("", "Something went wrong while trying to delete the record.");
+            }
+            return NoContent();
+        }
 
     }
 }
