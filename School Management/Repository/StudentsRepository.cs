@@ -21,6 +21,12 @@ namespace School_Management.Repository
             return Save();
         }
 
+        public bool DeleteStudent(Student student)
+        {
+            _dbContext.Remove(student);
+            return Save();
+        }
+
         public ICollection<Course> GetCoursesByAStudent(int studentId)
         {
             return _dbContext.Students.Where(s => s.StudentId == studentId).Include(cs => cs.CourseStudents).FirstOrDefault(s => s.StudentId == studentId).CourseStudents.Select(c => c.Course).ToList();
@@ -58,6 +64,12 @@ namespace School_Management.Repository
         public bool StudentExists(int studentId)
         {
             return _dbContext.Students.Any(s => s.StudentId == studentId);
+        }
+
+        public bool UpdateStudent(Student student)
+        {
+            _dbContext.Update(student);
+            return Save();
         }
     }
 }

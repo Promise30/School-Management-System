@@ -19,6 +19,12 @@ namespace School_Management.Repository
             return Save();
         }
 
+        public bool DeleteDepartment(Department department)
+        {
+            _dbContext.Remove(department);
+            return Save();
+        }
+
         public bool DepartmentExists(int departmentId)
         {
             return _dbContext.Departments.Any(d => d.DepartmentId == departmentId);
@@ -42,6 +48,12 @@ namespace School_Management.Repository
         public bool Save()
         {
             return _dbContext.SaveChanges() > 0 ? true : false;
+        }
+
+        public bool UpdateDepartment(int facultyId, Department department)
+        {
+            _dbContext.Update(department);
+            return Save();
         }
     }
 }
