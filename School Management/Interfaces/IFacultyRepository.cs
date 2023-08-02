@@ -9,6 +9,8 @@ namespace School_Management.Interfaces
         bool FacultyExists(int facultyId);
         ICollection<Department> GetDepartmentsOfFaculty(int facultyId);
         bool CreateFaculty(Faculty faculty);
+        bool UpdateFaculty(Faculty faculty);
+        bool DeleteFaculty(Faculty faculty);
         bool Save();
     }
 }

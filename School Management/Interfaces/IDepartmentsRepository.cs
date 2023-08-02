@@ -9,6 +9,8 @@ namespace School_Management.Interfaces
         bool DepartmentExists(int departmentId);
         ICollection<Course> GetCoursesOfDepartment(int departmentId);
         bool CreateDepartment(Department department);
+        bool UpdateDepartment(int facultyId, Department department);
+        bool DeleteDepartment(Department department);
         bool Save();
     }
 }

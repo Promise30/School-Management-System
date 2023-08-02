@@ -9,6 +9,8 @@ namespace School_Management.Interfaces
         Course GetCourseOfATeacher(int teacherId);
         bool TeacherExists(int teacherId);
         bool CreateTeacher(Teacher teacher);
+        bool UpdateTeacher(Teacher teacher);
+        bool DeleteTeacher(Teacher teacher);
         bool Save();
     }
 }

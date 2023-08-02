@@ -11,6 +11,8 @@ namespace School_Management.Interfaces
         Department GetDepartmentOfACourse(int courseId);
         bool CourseExists(int courseId);
         bool CreateCourse(Course course);
+        bool UpdateCourse(Course course);
+        bool DeleteCourse(Course course);
         bool Save();
     }
 }
