@@ -36,16 +36,37 @@ namespace School_Management.Controllers
         public IActionResult GetFaculty(int id)
         {
             var faculty = _mapper.Map<FacultyDTO>(_facultyRepository.GetFaculty(id));
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
             if (faculty == null)
             {
 
                 return NotFound();
             }
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
             return Ok(faculty);
+        }
+        [HttpGet("{facultyId}/Departments")]
+        public IActionResult GetDepartmentsOfAFaculty(int facultyId)
+        {
+            if (!_facultyRepository.FacultyExists(facultyId))
+            {
+                return NotFound();
+            }
+            var departments = _mapper.Map<List<DepartmentDTO>>(_facultyRepository.GetDepartmentsOfFaculty(facultyId));
+            if (departments == null)
+            {
+                return NotFound();
+            }
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            return Ok(departments);
+
         }
 
 

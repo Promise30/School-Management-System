@@ -47,6 +47,40 @@ namespace School_Management.Controllers
             if (course is null) return NotFound();
             return Ok(course);
         }
+        [HttpGet("{courseId}/Students")]
+        public IActionResult GetStudentsOfACourse(int courseId)
+        {
+
+            var students = _mapper.Map<List<StudentDTO>>(_coursesRepository.GetStudentsOfACourse(courseId));
+            if (students == null)
+            {
+                return NotFound("No students enrolled in the course.");
+            }
+
+            return Ok(students);
+
+
+        }
+        [HttpGet("{courseId}/Teachers")]
+        public IActionResult GetTeachersOFACourse(int courseId)
+        {
+            if (!_coursesRepository.CourseExists(courseId))
+            {
+                return NotFound();
+            }
+            var courseTeachers = _mapper.Map<List<TeacherDTO>>(_coursesRepository.GetTeachersOfACourse(courseId));
+            if (courseTeachers == null)
+            {
+                return NotFound();
+            }
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            return Ok(courseTeachers);
+        }
+
         [HttpPost]
         public IActionResult CreateCourse([FromQuery] int departmentId, [FromBody] CreateCourse courseCreate)
         {
@@ -73,6 +107,49 @@ namespace School_Management.Controllers
 
             }
             return Ok("Course successfully created.");
+        }
+        [HttpPost("{courseId}/EnrollStudents")]
+        public IActionResult EnrollStudentsInCourse(int courseId, [FromBody] List<int> StudentIds)
+        {
+            try
+            {
+                _coursesRepository.EnrollStudents(courseId, StudentIds);
+                return Ok("Students enrolled in the course successfully.");
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest("An error occurred while enrolling students in the course.");
+            }
+
+
+        }
+        [HttpPut("{courseId}")]
+        public IActionResult UpdateCourse([FromQuery] int departmentId, int courseId, [FromBody] CourseDTO updatedCourse)
+        {
+            if (updatedCourse == null || courseId != updatedCourse.CourseId)
+            {
+                return BadRequest(ModelState);
+            }
+            if (!_coursesRepository.CourseExists(courseId))
+            {
+                return NotFound();
+            }
+            if (!ModelState.IsValid)
+            {
+                return BadRequest();
+            }
+            var courseMap = _mapper.Map<Course>(updatedCourse);
+            if (!_coursesRepository.UpdateCourse(departmentId, courseMap))
+            {
+                ModelState.AddModelError("", "Something went wrong while trying to update the record.");
+                return StatusCode(500, ModelState);
+            }
+            return NoContent();
+
         }
         [HttpDelete("{courseId}")]
         public IActionResult DeleteCourse(int courseId)

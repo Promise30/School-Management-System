@@ -60,6 +60,34 @@ namespace School_Management.Controllers
             }
             return Ok(departmentCourses);
         }
+        [HttpGet("{departmentId}/Teachers")]
+        public IActionResult GetTeachersOfADepartment(int departmentId)
+        {
+            if (!_departmentsRepository.DepartmentExists(departmentId))
+            {
+                return NotFound();
+            }
+            var departmentTeachers = _mapper.Map<List<TeacherDTO>>(_departmentsRepository.GetTeachersOfADepartment(departmentId));
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            return Ok(departmentTeachers);
+        }
+        [HttpGet("{departmentId}/Students")]
+        public IActionResult GetStudentsOfADepartment(int departmentId)
+        {
+            if (!_departmentsRepository.DepartmentExists(departmentId))
+            {
+                return NotFound();
+            }
+            var departmentStudents = _mapper.Map<List<StudentDTO>>(_departmentsRepository.GetStudentsOfADepartment(departmentId));
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            return Ok(departmentStudents);
+        }
         [HttpPost]
         public IActionResult CreateDepartment([FromQuery] int facultyId, [FromBody] CreateDepartment departmentCreate)
         {
@@ -90,9 +118,9 @@ namespace School_Management.Controllers
             return Ok("Department successfully created.");
         }
         [HttpPut("{departmentId}")]
-        public IActionResult UpdateDepartment(int facultyId, [FromBody] DepartmentDTO updatedDepartment)
+        public IActionResult UpdateDepartment([FromQuery] int facultyId, int departmentId, [FromBody] DepartmentDTO updatedDepartment)
         {
-            if (updatedDepartment == null || facultyId != updatedDepartment.DepartmentId)
+            if (updatedDepartment == null || departmentId != updatedDepartment.DepartmentId)
             {
                 return BadRequest(ModelState);
             }

@@ -24,25 +24,32 @@ namespace School_Management.Controllers
         public IActionResult GetTeachers()
         {
             var teachers = _mapper.Map<List<TeacherDTO>>(_teachersRepository.GetTeachers());
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
+
             if (teachers == null)
             {
                 return NotFound();
             }
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
             return Ok(teachers);
         }
         [HttpGet("{id}")]
         public IActionResult GetTeacher(int id)
         {
             var teacher = _mapper.Map<TeacherDTO>(_teachersRepository.GetTeacher(id));
+            if (teacher == null)
+            {
+                return NotFound();
+            }
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
-            if (teacher is null) return NotFound();
+
             return Ok(teacher);
         }
         [HttpGet("{teacherId}/course")]
@@ -53,11 +60,26 @@ namespace School_Management.Controllers
                 return NotFound();
             }
             var teacherCourse = _mapper.Map<CourseDTO>(_teachersRepository.GetCourseOfATeacher(teacherId));
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
             return Ok(teacherCourse);
+        }
+        [HttpGet("{teacherId}/Students")]
+        public IActionResult GetStudentsOfATeacher(int teacherId)
+        {
+            if (!_teachersRepository.TeacherExists(teacherId))
+            {
+                return NotFound();
+            }
+            var teacherStudents = _mapper.Map<List<StudentDTO>>(_teachersRepository.GetStudentsOfATeacher(teacherId));
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            return Ok(teacherStudents);
         }
         [HttpPost]
         public IActionResult CreateTeacher([FromQuery] int courseId, [FromBody] CreateTeacher teacherCreate)
@@ -80,6 +102,30 @@ namespace School_Management.Controllers
                 return StatusCode(500, ModelState);
             }
             return Ok("Teacher successfully created.");
+        }
+        [HttpPut("{teacherId}")]
+        public IActionResult UpdateTeacher([FromQuery] int courseId, int teacherId, [FromBody] TeacherDTO updatedTeacher)
+        {
+            if (updatedTeacher == null || teacherId != updatedTeacher.TeacherId)
+            {
+                return BadRequest(ModelState);
+            }
+
+            if (!_teachersRepository.TeacherExists(teacherId))
+            {
+                return NotFound();
+            }
+            if (!ModelState.IsValid)
+            {
+                return BadRequest();
+            }
+            var teacherMap = _mapper.Map<Teacher>(updatedTeacher);
+            if (!_teachersRepository.UpdateTeacher(courseId, teacherMap))
+            {
+                ModelState.AddModelError("", "Something went wrong while trying to update the record.");
+                return StatusCode(500, ModelState);
+            }
+            return NoContent();
         }
         [HttpDelete("{teacherId}")]
         public IActionResult DeleteTeacher(int teacherId)

@@ -24,7 +24,6 @@ namespace School_Management.Controllers
             _studentsRepository = studentsRepository;
             _departmentsRepository = departmentsRepository;
         }
-        //GET A LIST OF ALL STUDENTS
         [HttpGet]
         public IActionResult GetStudents()
         {
@@ -49,7 +48,10 @@ namespace School_Management.Controllers
             {
                 return BadRequest(ModelState);
             }
-            if (student is null) return NotFound();
+            if (student == null)
+            {
+                return NotFound();
+            }
             return Ok(student);
         }
         [HttpGet("{studentId}/department")]
@@ -65,6 +67,25 @@ namespace School_Management.Controllers
                 return BadRequest(ModelState);
             }
             return Ok(studentDepartment);
+        }
+        [HttpGet("{studentId}/Courses")]
+        public IActionResult GetCoursesOfStudent(int studentId)
+        {
+            if (!_studentsRepository.StudentExists(studentId))
+            {
+                return NotFound();
+            }
+            var studentCourses = _mapper.Map<List<CourseDTO>>(_studentsRepository.GetCoursesByAStudent(studentId));
+            if (studentCourses == null)
+            {
+                return NotFound();
+            }
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            return Ok(studentCourses);
         }
         [HttpPost]
         [ProducesResponseType(204)]
@@ -87,6 +108,30 @@ namespace School_Management.Controllers
                 return StatusCode(500, ModelState);
             }
             return Ok("Student created successfully");
+
+        }
+        [HttpPut("{studentId}")]
+        public IActionResult UpdateCourse([FromQuery] int departmentId, int studentId, [FromBody] StudentDTO updatedStudent)
+        {
+            if (updatedStudent == null || studentId != updatedStudent.StudentId)
+            {
+                return BadRequest(ModelState);
+            }
+            if (!_studentsRepository.StudentExists(studentId))
+            {
+                return NotFound();
+            }
+            if (!ModelState.IsValid)
+            {
+                return BadRequest();
+            }
+            var studentMap = _mapper.Map<Student>(updatedStudent);
+            if (!_studentsRepository.UpdateStudent(departmentId, studentMap))
+            {
+                ModelState.AddModelError("", "Something went wrong while trying to update the record.");
+                return StatusCode(500, ModelState);
+            }
+            return NoContent();
 
         }
         [HttpDelete("{studentId}")]
