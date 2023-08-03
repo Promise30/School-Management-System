@@ -8,6 +8,8 @@ namespace School_Management.Interfaces
         Department GetDepartment(int departmentId);
         bool DepartmentExists(int departmentId);
         ICollection<Course> GetCoursesOfDepartment(int departmentId);
+        ICollection<Teacher> GetTeachersOfADepartment(int departmentId);
+        ICollection<Student> GetStudentsOfADepartment(int departmentId);
         bool CreateDepartment(Department department);
         bool UpdateDepartment(int facultyId, Department department);
         bool DeleteDepartment(Department department);

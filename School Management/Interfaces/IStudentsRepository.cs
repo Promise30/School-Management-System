@@ -10,7 +10,7 @@ namespace School_Management.Interfaces
         ICollection<Course> GetCoursesByAStudent(int studentId);
         bool StudentExists(int studentId);
         bool CreateStudent(Student student);
-        bool UpdateStudent(Student student);
+        bool UpdateStudent(int departmentId, Student student);
         bool DeleteStudent(Student student);
         bool Save();
     }
