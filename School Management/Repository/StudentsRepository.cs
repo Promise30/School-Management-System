@@ -16,7 +16,7 @@ namespace School_Management.Repository
 
         public bool CreateStudent(Student student)
         {
-            // Change Tracker
+
             _dbContext.Add(student);
             return Save();
         }
@@ -29,14 +29,15 @@ namespace School_Management.Repository
 
         public ICollection<Course> GetCoursesByAStudent(int studentId)
         {
-            return _dbContext.Students.Where(s => s.StudentId == studentId).Include(cs => cs.CourseStudents).FirstOrDefault(s => s.StudentId == studentId).CourseStudents.Select(c => c.Course).ToList();
-            //Where(cs => cs.CourseStudents. .Contains(studentId));
-            //return _dbContext.Students.Where(s => s.StudentId == studentId)
-            //                          .Include(c => c.CourseStudents)
-            //                          .FirstOrDefault(s => s.StudentId == studentId)
-            //                          .CourseStudents.Select(cs => cs.Course).ToList();
-
+            return _dbContext.Students
+                             .Where(s => s.StudentId == studentId)
+                             .Include(s => s.CourseStudents)
+                             .ThenInclude(cs => cs.Course)
+                             .ThenInclude(c => c.Department)
+                             .SelectMany(s => s.CourseStudents.Select(cs => cs.Course))
+                             .ToList();
         }
+
 
         public Department GetDepartmentOfStudent(int studentId)
         {
@@ -66,7 +67,7 @@ namespace School_Management.Repository
             return _dbContext.Students.Any(s => s.StudentId == studentId);
         }
 
-        public bool UpdateStudent(Student student)
+        public bool UpdateStudent(int departmentId, Student student)
         {
             _dbContext.Update(student);
             return Save();

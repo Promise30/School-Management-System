@@ -45,6 +45,16 @@ namespace School_Management.Repository
             return _dbContext.Departments.ToList();
         }
 
+        public ICollection<Student> GetStudentsOfADepartment(int departmentId)
+        {
+            return _dbContext.Students.Where(s => s.Department.DepartmentId == departmentId).ToList();
+        }
+
+        public ICollection<Teacher> GetTeachersOfADepartment(int departmentId)
+        {
+            return _dbContext.Teachers.Where(t => t.Course.Department.DepartmentId == departmentId).ToList();
+        }
+
         public bool Save()
         {
             return _dbContext.SaveChanges() > 0 ? true : false;

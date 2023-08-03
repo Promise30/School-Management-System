@@ -16,16 +16,23 @@ namespace School_Management.Repository
             _dbContext.Add(teacher);
             return Save();
         }
-
         public bool DeleteTeacher(Teacher teacher)
         {
             _dbContext.Remove(teacher);
             return Save();
         }
-
         public Course GetCourseOfATeacher(int teacherId)
         {
-            return _dbContext.Teachers.Where(t => t.TeacherId == teacherId).Select(t => t.Course).FirstOrDefault();
+            return _dbContext.Teachers
+                    .Where(t => t.TeacherId == teacherId)
+                    .Select(t => t.Course)
+                    .FirstOrDefault();
+        }
+
+        public ICollection<Student> GetStudentsOfATeacher(int teacherId)
+        {
+            return _dbContext.Students
+                     .Where(s => s.CourseStudents.Any(cs => cs.Course.Teachers.Any(t => t.TeacherId == teacherId))).ToList();
         }
 
         public Teacher GetTeacher(int teacherId)
@@ -48,7 +55,7 @@ namespace School_Management.Repository
             return _dbContext.Teachers.Any(t => t.TeacherId == teacherId);
         }
 
-        public bool UpdateTeacher(Teacher teacher)
+        public bool UpdateTeacher(int courseId, Teacher teacher)
         {
             _dbContext.Update(teacher);
             return Save();
