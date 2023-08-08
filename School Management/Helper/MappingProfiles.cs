@@ -19,6 +19,8 @@ namespace School_Management.Helper
             CreateMap<CreateFaculty, Faculty>();
             CreateMap<Teacher, TeacherDTO>().ReverseMap();
             CreateMap<CreateTeacher, Teacher>();
+            CreateMap<ApiUser, UserDTO>().ReverseMap();
+
         }
     }
 }
