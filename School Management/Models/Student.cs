@@ -13,6 +13,7 @@ namespace School_Management.Models
         public DateTime BirthDate { get; set; }
         public string Gender { get; set; }
         public string Major { get; set; }
+        public int DepartmentId { get; set; }
 
         // Navigation Property
         public virtual Department Department { get; set; }

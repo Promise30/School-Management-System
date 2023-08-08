@@ -10,6 +10,7 @@ namespace School_Management.Models
 
         public string CourseName { get; set; }
         public string? Description { get; set; }
+        public int DepartmentId { get; set; }
         // Navigation Property
         public virtual Department Department { get; set; }
         // Collection Navigation Reference

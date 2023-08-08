@@ -10,6 +10,7 @@ namespace School_Management.Models
         public string? MiddleName { get; set; }
         [DataType(DataType.Date)]
         public DateTime BirthDate { get; set; }
+        public int CourseId { get; set; }
 
         // Navigation Property
         public virtual Course Course { get; set; }

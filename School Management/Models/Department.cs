@@ -9,6 +9,7 @@ namespace School_Management.Models
         public string? Description { get; set; }
         [DataType(DataType.Date)]
         public DateTime YearFounded { get; set; }
+        public int FacultyId { get; set; }
         // Navigation Property
         public virtual Faculty Faculty { get; set; }
         // Collection Navigation Reference
