@@ -23,13 +23,11 @@ namespace School_Management.Controllers
 
         }
         [HttpGet]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public IActionResult GetCourses()
         {
             var courses = _mapper.Map<List<CourseDTO>>(_coursesRepository.GetCourses());
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
             if (courses == null)
             {
                 return NotFound();
@@ -37,20 +35,33 @@ namespace School_Management.Controllers
             return Ok(courses);
         }
         [HttpGet("{id}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public IActionResult GetCourse(int id)
         {
-            var course = _mapper.Map<CourseDTO>(_coursesRepository.GetCourse(id));
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
-            if (course is null) return NotFound();
+            var course = _mapper.Map<CourseDTO>(_coursesRepository.GetCourse(id));
+
+            if (course == null)
+            {
+                return NotFound();
+            }
             return Ok(course);
         }
         [HttpGet("{courseId}/Students")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public IActionResult GetStudentsOfACourse(int courseId)
         {
-
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
             var students = _mapper.Map<List<StudentDTO>>(_coursesRepository.GetStudentsOfACourse(courseId));
             if (students == null)
             {
@@ -62,6 +73,9 @@ namespace School_Management.Controllers
 
         }
         [HttpGet("{courseId}/Teachers")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public IActionResult GetTeachersOFACourse(int courseId)
         {
             if (!_coursesRepository.CourseExists(courseId))
@@ -82,6 +96,10 @@ namespace School_Management.Controllers
         }
 
         [HttpPost]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public IActionResult CreateCourse([FromQuery] int departmentId, [FromBody] CreateCourse courseCreate)
         {
             if (courseCreate == null)
@@ -109,6 +127,9 @@ namespace School_Management.Controllers
             return Ok("Course successfully created.");
         }
         [HttpPost("{courseId}/EnrollStudents")]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public IActionResult EnrollStudentsInCourse(int courseId, [FromBody] List<int> StudentIds)
         {
             try
@@ -122,25 +143,29 @@ namespace School_Management.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest("An error occurred while enrolling students in the course.");
+                return StatusCode(500, "An error occurred while enrolling students for the course: " + ex.Message);
             }
 
 
         }
         [HttpPut("{courseId}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public IActionResult UpdateCourse([FromQuery] int departmentId, int courseId, [FromBody] CourseDTO updatedCourse)
         {
-            if (updatedCourse == null || courseId != updatedCourse.CourseId)
+            if (updatedCourse == null)
             {
                 return BadRequest(ModelState);
             }
             if (!_coursesRepository.CourseExists(courseId))
             {
-                return NotFound();
+                return NotFound("Course not found.");
             }
             if (!ModelState.IsValid)
             {
-                return BadRequest();
+                return BadRequest(ModelState);
             }
             var courseMap = _mapper.Map<Course>(updatedCourse);
             if (!_coursesRepository.UpdateCourse(departmentId, courseMap))
@@ -152,11 +177,15 @@ namespace School_Management.Controllers
 
         }
         [HttpDelete("{courseId}")]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public IActionResult DeleteCourse(int courseId)
         {
             if (!_coursesRepository.CourseExists(courseId))
             {
-                return NotFound();
+                return NotFound("Course not found.");
             }
             var courseToDelete = _coursesRepository.GetCourse(courseId);
             if (!ModelState.IsValid)
@@ -165,7 +194,8 @@ namespace School_Management.Controllers
             }
             if (!_coursesRepository.DeleteCourse(courseToDelete))
             {
-                ModelState.AddModelError("", "Something went wrong while trying to delete the record.");
+                ModelState.AddModelError("", "Something went wrong while trying to delete the course.");
+                return StatusCode(500, ModelState);
             }
             return NoContent();
         }

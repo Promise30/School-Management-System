@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using School_Management.Interfaces;
 using School_Management.Models;
@@ -13,26 +14,26 @@ namespace School_Management.Controllers
     public class StudentsController : ControllerBase
     {
         private readonly IMapper _mapper;
-        private readonly ILogger<StudentsController> _logger;
+
         private readonly IStudentsRepository _studentsRepository;
         private readonly IDepartmentsRepository _departmentsRepository;
 
-        public StudentsController(IStudentsRepository studentsRepository, IDepartmentsRepository departmentsRepository, ILogger<StudentsController> logger, IMapper mapper)
+        public StudentsController(IStudentsRepository studentsRepository, IDepartmentsRepository departmentsRepository, IMapper mapper)
         {
             _mapper = mapper;
-            _logger = logger;
             _studentsRepository = studentsRepository;
             _departmentsRepository = departmentsRepository;
         }
         [HttpGet]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [Authorize]
         public IActionResult GetStudents()
         {
 
             var students = _mapper.Map<List<StudentDTO>>(_studentsRepository.GetStudents());
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
+
             if (students == null)
             {
                 return NotFound();
@@ -41,13 +42,17 @@ namespace School_Management.Controllers
 
         }
         [HttpGet("{id}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public IActionResult GetStudent(int id)
         {
-            var student = _mapper.Map<StudentDTO>(_studentsRepository.GetStudent(id));
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
+            var student = _mapper.Map<StudentDTO>(_studentsRepository.GetStudent(id));
+
             if (student == null)
             {
                 return NotFound();
@@ -55,6 +60,9 @@ namespace School_Management.Controllers
             return Ok(student);
         }
         [HttpGet("{studentId}/department")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public IActionResult GetDepartmentOfStudent(int studentId)
         {
             if (!_studentsRepository.StudentExists(studentId))
@@ -69,6 +77,9 @@ namespace School_Management.Controllers
             return Ok(studentDepartment);
         }
         [HttpGet("{studentId}/Courses")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public IActionResult GetCoursesOfStudent(int studentId)
         {
             if (!_studentsRepository.StudentExists(studentId))
@@ -88,13 +99,15 @@ namespace School_Management.Controllers
             return Ok(studentCourses);
         }
         [HttpPost]
-        [ProducesResponseType(204)]
-        [ProducesResponseType(400)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public IActionResult CreateStudent([FromQuery] int departmentId, [FromBody] CreateStudent studentCreate)
         {
             if (studentCreate == null)
             {
-                return BadRequest(ModelState);
+                return NotFound();
             }
             if (!ModelState.IsValid)
             {
@@ -111,9 +124,12 @@ namespace School_Management.Controllers
 
         }
         [HttpPut("{studentId}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public IActionResult UpdateCourse([FromQuery] int departmentId, int studentId, [FromBody] StudentDTO updatedStudent)
         {
-            if (updatedStudent == null || studentId != updatedStudent.StudentId)
+            if (updatedStudent == null)
             {
                 return BadRequest(ModelState);
             }
@@ -123,7 +139,7 @@ namespace School_Management.Controllers
             }
             if (!ModelState.IsValid)
             {
-                return BadRequest();
+                return BadRequest(ModelState);
             }
             var studentMap = _mapper.Map<Student>(updatedStudent);
             if (!_studentsRepository.UpdateStudent(departmentId, studentMap))
@@ -135,6 +151,10 @@ namespace School_Management.Controllers
 
         }
         [HttpDelete("{studentId}")]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public IActionResult DeleteStudent(int studentId)
         {
             if (!_studentsRepository.StudentExists(studentId))
@@ -148,7 +168,8 @@ namespace School_Management.Controllers
             }
             if (!_studentsRepository.DeleteStudent(studentToDelete))
             {
-                ModelState.AddModelError("", "Something went wrong while trying to delete the record.");
+                ModelState.AddModelError("", "Something went wrong while trying to delete the student.");
+                return StatusCode(500, ModelState);
             }
             return NoContent();
         }

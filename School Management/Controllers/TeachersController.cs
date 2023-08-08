@@ -21,6 +21,8 @@ namespace School_Management.Controllers
             _teachersRepository = teachersRepository;
         }
         [HttpGet]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public IActionResult GetTeachers()
         {
             var teachers = _mapper.Map<List<TeacherDTO>>(_teachersRepository.GetTeachers());
@@ -29,30 +31,31 @@ namespace School_Management.Controllers
             {
                 return NotFound();
             }
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
 
             return Ok(teachers);
         }
         [HttpGet("{id}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public IActionResult GetTeacher(int id)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
             var teacher = _mapper.Map<TeacherDTO>(_teachersRepository.GetTeacher(id));
             if (teacher == null)
             {
                 return NotFound();
             }
 
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
             return Ok(teacher);
         }
         [HttpGet("{teacherId}/course")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public IActionResult GetCourseOfTeacher(int teacherId)
         {
             if (!_teachersRepository.TeacherExists(teacherId))
@@ -68,6 +71,9 @@ namespace School_Management.Controllers
             return Ok(teacherCourse);
         }
         [HttpGet("{teacherId}/Students")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public IActionResult GetStudentsOfATeacher(int teacherId)
         {
             if (!_teachersRepository.TeacherExists(teacherId))
@@ -82,6 +88,9 @@ namespace School_Management.Controllers
             return Ok(teacherStudents);
         }
         [HttpPost]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public IActionResult CreateTeacher([FromQuery] int courseId, [FromBody] CreateTeacher teacherCreate)
         {
             if (teacherCreate == null)
@@ -104,9 +113,12 @@ namespace School_Management.Controllers
             return Ok("Teacher successfully created.");
         }
         [HttpPut("{teacherId}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public IActionResult UpdateTeacher([FromQuery] int courseId, int teacherId, [FromBody] TeacherDTO updatedTeacher)
         {
-            if (updatedTeacher == null || teacherId != updatedTeacher.TeacherId)
+            if (updatedTeacher == null)
             {
                 return BadRequest(ModelState);
             }
@@ -117,7 +129,7 @@ namespace School_Management.Controllers
             }
             if (!ModelState.IsValid)
             {
-                return BadRequest();
+                return BadRequest(ModelState);
             }
             var teacherMap = _mapper.Map<Teacher>(updatedTeacher);
             if (!_teachersRepository.UpdateTeacher(courseId, teacherMap))
@@ -128,6 +140,10 @@ namespace School_Management.Controllers
             return NoContent();
         }
         [HttpDelete("{teacherId}")]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public IActionResult DeleteTeacher(int teacherId)
         {
             if (!_teachersRepository.TeacherExists(teacherId))
@@ -141,7 +157,8 @@ namespace School_Management.Controllers
             }
             if (!_teachersRepository.DeleteTeacher(teacherToDelete))
             {
-                ModelState.AddModelError("", "Something went wrong while trying to delete the record.");
+                ModelState.AddModelError("", "Something went wrong while trying to delete the teacher record.");
+                return StatusCode(500, ModelState);
             }
             return NoContent();
         }

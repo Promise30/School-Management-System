@@ -22,13 +22,11 @@ namespace School_Management.Controllers
             _mapper = mapper;
         }
         [HttpGet]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public IActionResult GetDepartments()
         {
             var departments = _mapper.Map<List<DepartmentDTO>>(_departmentsRepository.GetDepartments());
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
             if (departments == null)
             {
                 return NotFound();
@@ -36,17 +34,27 @@ namespace School_Management.Controllers
             return Ok(departments);
         }
         [HttpGet("{id}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public IActionResult GetDepartment(int id)
         {
-            var department = _mapper.Map<DepartmentDTO>(_departmentsRepository.GetDepartment(id));
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
-            if (department is null) return NotFound();
+            var department = _mapper.Map<DepartmentDTO>(_departmentsRepository.GetDepartment(id));
+
+            if (department == null)
+            {
+                return NotFound();
+            };
             return Ok(department);
         }
         [HttpGet("{departmentId}/courses")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public IActionResult GetCoursesByDepartment(int departmentId)
         {
             if (!_departmentsRepository.DepartmentExists(departmentId))
@@ -61,6 +69,9 @@ namespace School_Management.Controllers
             return Ok(departmentCourses);
         }
         [HttpGet("{departmentId}/Teachers")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public IActionResult GetTeachersOfADepartment(int departmentId)
         {
             if (!_departmentsRepository.DepartmentExists(departmentId))
@@ -75,6 +86,9 @@ namespace School_Management.Controllers
             return Ok(departmentTeachers);
         }
         [HttpGet("{departmentId}/Students")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public IActionResult GetStudentsOfADepartment(int departmentId)
         {
             if (!_departmentsRepository.DepartmentExists(departmentId))
@@ -89,6 +103,10 @@ namespace School_Management.Controllers
             return Ok(departmentStudents);
         }
         [HttpPost]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public IActionResult CreateDepartment([FromQuery] int facultyId, [FromBody] CreateDepartment departmentCreate)
         {
 
@@ -118,9 +136,13 @@ namespace School_Management.Controllers
             return Ok("Department successfully created.");
         }
         [HttpPut("{departmentId}")]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
         public IActionResult UpdateDepartment([FromQuery] int facultyId, int departmentId, [FromBody] DepartmentDTO updatedDepartment)
         {
-            if (updatedDepartment == null || departmentId != updatedDepartment.DepartmentId)
+            if (updatedDepartment == null)
             {
                 return BadRequest(ModelState);
             }
@@ -130,7 +152,7 @@ namespace School_Management.Controllers
             }
             if (!ModelState.IsValid)
             {
-                return BadRequest();
+                return BadRequest(ModelState);
             }
             var departmentMap = _mapper.Map<Department>(updatedDepartment);
             if (!_departmentsRepository.UpdateDepartment(facultyId, departmentMap))
@@ -141,6 +163,10 @@ namespace School_Management.Controllers
             return NoContent();
         }
         [HttpDelete("{departmentId}")]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public IActionResult DeleteDepartment(int departmentId)
         {
             if (!_departmentsRepository.DepartmentExists(departmentId))
@@ -154,7 +180,8 @@ namespace School_Management.Controllers
             }
             if (!_departmentsRepository.DeleteDepartment(departmentToDelete))
             {
-                ModelState.AddModelError("", "Something went wrong while trying to delete the record.");
+                ModelState.AddModelError("", "Something went wrong while trying to delete the department.");
+                return StatusCode(500, ModelState);
             }
             return NoContent();
         }
