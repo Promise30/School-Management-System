@@ -10,6 +10,7 @@ namespace School_Management.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
 
     public class StudentsController : ControllerBase
     {
