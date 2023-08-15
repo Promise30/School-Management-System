@@ -8,6 +8,7 @@ namespace School_Management.Models.DTO
         public string Name { get; set; }
         public string? Description { get; set; }
         public DateTime YearFounded { get; set; }
+        public virtual ICollection<DepartmentDTO> Departments { get; set; }
 
     }
 }
