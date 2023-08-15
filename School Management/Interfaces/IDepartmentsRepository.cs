@@ -2,17 +2,12 @@
 
 namespace School_Management.Interfaces
 {
-    public interface IDepartmentsRepository
+    public interface IDepartmentsRepository : IGenericRepository<Department>
     {
-        ICollection<Department> GetDepartments();
-        Department GetDepartment(int departmentId);
-        bool DepartmentExists(int departmentId);
-        ICollection<Course> GetCoursesOfDepartment(int departmentId);
-        ICollection<Teacher> GetTeachersOfADepartment(int departmentId);
-        ICollection<Student> GetStudentsOfADepartment(int departmentId);
-        bool CreateDepartment(Department department);
-        bool UpdateDepartment(int facultyId, Department department);
-        bool DeleteDepartment(Department department);
-        bool Save();
+
+        Task<ICollection<Course>> GetCoursesOfADepartment(int departmentId);
+        Task<ICollection<Teacher>> GetTeachersOfADepartment(int departmentId);
+        Task<ICollection<Student>> GetStudentsOfADepartment(int departmentId);
+
     }
 }

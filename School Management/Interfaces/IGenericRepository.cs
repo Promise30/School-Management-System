@@ -13,6 +13,7 @@ namespace School_Management.Interfaces
             List<string> includes = null);
         Task Insert(T entity);
         Task Delete(int id);
+
         void Update(T entity);
     }
 }
