@@ -13,180 +13,229 @@ namespace School_Management.Controllers
     [Authorize]
     public class DepartmentsController : ControllerBase
     {
-        private readonly IFacultyRepository _facultyRepository;
-        private readonly IDepartmentsRepository _departmentsRepository;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
-
-        public DepartmentsController(IFacultyRepository facultyRepository, IDepartmentsRepository departmentsRepository, IMapper mapper)
+        private readonly ILogger<DepartmentsController> _logger;
+        public DepartmentsController(IMapper mapper, IUnitOfWork unitOfWork, ILogger<DepartmentsController> logger)
         {
-            _facultyRepository = facultyRepository;
-            _departmentsRepository = departmentsRepository;
+
             _mapper = mapper;
+            _unitOfWork = unitOfWork;
+            _logger = logger;
         }
+
+
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public IActionResult GetDepartments()
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetDepartments()
         {
-            var departments = _mapper.Map<List<DepartmentDTO>>(_departmentsRepository.GetDepartments());
-            if (departments == null)
+            try
             {
-                return NotFound();
+                var departments = await _unitOfWork.Departments.GetAll();
+                if (departments == null)
+                {
+                    return NotFound();
+                }
+                var results = _mapper.Map<List<DepartmentDTO>>(departments);
+                return Ok(results);
             }
-            return Ok(departments);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Something went wrong in the {nameof(GetDepartments)}");
+                return StatusCode(500, "Internal Server Error. Please try again later.");
+            }
         }
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}", Name = "GetDepartment")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public IActionResult GetDepartment(int id)
+        public async Task<IActionResult> GetDepartment(int id)
         {
-            if (!ModelState.IsValid)
+            try
             {
-                return BadRequest(ModelState);
+                var department = await _unitOfWork.Departments.Get(x => x.DepartmentId == id);
+                if (department == null)
+                {
+                    return NotFound();
+                }
+                var result = _mapper.Map<DepartmentDTO>(department);
+                return Ok(result);
             }
-            var department = _mapper.Map<DepartmentDTO>(_departmentsRepository.GetDepartment(id));
-
-            if (department == null)
+            catch (Exception ex)
             {
-                return NotFound();
-            };
-            return Ok(department);
+                _logger.LogError(ex, $"Something went wrong in the {nameof(GetDepartment)}");
+                return StatusCode(500, "Internal Server Error. Please try again later.");
+            }
         }
+
+
         [HttpGet("{departmentId}/courses")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public IActionResult GetCoursesByDepartment(int departmentId)
+        public async Task<IActionResult> GetCoursesByDepartment(int departmentId)
         {
-            if (!_departmentsRepository.DepartmentExists(departmentId))
+            try
             {
-                return NotFound();
+                var departmentCourses = await _unitOfWork.Departments.GetCoursesOfADepartment(departmentId);
+                if (departmentCourses == null)
+                {
+                    return NotFound();
+                }
+                var results = _mapper.Map<List<CourseDTO>>(departmentCourses);
+                return Ok(results);
             }
-            var departmentCourses = _mapper.Map<List<CourseDTO>>(_departmentsRepository.GetCoursesOfDepartment(departmentId));
-            if (!ModelState.IsValid)
+            catch (Exception ex)
             {
-                return BadRequest(ModelState);
+                _logger.LogError(ex, $"Something went wrong in the {nameof(GetCoursesByDepartment)}");
+                return StatusCode(500, "Internal Server Error. Please try again later.");
             }
-            return Ok(departmentCourses);
+
         }
-        [HttpGet("{departmentId}/Teachers")]
+        [HttpGet("{departmentId}/teachers")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public IActionResult GetTeachersOfADepartment(int departmentId)
+        public async Task<IActionResult> GetTeachersByDepartment(int departmentId)
         {
-            if (!_departmentsRepository.DepartmentExists(departmentId))
+            try
             {
-                return NotFound();
+                var departmentTeachers = await _unitOfWork.Departments.GetTeachersOfADepartment(departmentId);
+                if (departmentTeachers == null)
+                {
+                    return NotFound();
+                }
+                var results = _mapper.Map<List<TeacherDTO>>(departmentTeachers);
+                return Ok(results);
             }
-            var departmentTeachers = _mapper.Map<List<TeacherDTO>>(_departmentsRepository.GetTeachersOfADepartment(departmentId));
-            if (!ModelState.IsValid)
+            catch (Exception ex)
             {
-                return BadRequest(ModelState);
+                _logger.LogError(ex, $"Something went wrong in the {nameof(GetTeachersByDepartment)}");
+                return StatusCode(500, "Internal Server Error. Please try again later.");
             }
-            return Ok(departmentTeachers);
+
         }
-        [HttpGet("{departmentId}/Students")]
+        [HttpGet("{departmentId}/students")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public IActionResult GetStudentsOfADepartment(int departmentId)
+        public async Task<IActionResult> GetStudentsByDepartment(int departmentId)
         {
-            if (!_departmentsRepository.DepartmentExists(departmentId))
+            try
             {
-                return NotFound();
+                var departmentStudents = await _unitOfWork.Departments.GetStudentsOfADepartment(departmentId);
+                if (departmentStudents == null)
+                {
+                    return NotFound();
+                }
+                var results = _mapper.Map<List<StudentDTO>>(departmentStudents);
+                return Ok(results);
             }
-            var departmentStudents = _mapper.Map<List<StudentDTO>>(_departmentsRepository.GetStudentsOfADepartment(departmentId));
-            if (!ModelState.IsValid)
+            catch (Exception ex)
             {
-                return BadRequest(ModelState);
+                _logger.LogError(ex, $"Something went wrong in the {nameof(GetStudentsByDepartment)}");
+                return StatusCode(500, "Internal Server Error. Please try again later.");
             }
-            return Ok(departmentStudents);
+
         }
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public IActionResult CreateDepartment([FromQuery] int facultyId, [FromBody] CreateDepartment departmentCreate)
+        public async Task<IActionResult> CreateDepartment([FromBody] CreateDepartment createDepartment)
         {
-
-            if (departmentCreate == null)
-            {
-                return BadRequest(ModelState);
-            }
-            var department = _departmentsRepository.GetDepartments().Where(d => d.Name.Trim().ToUpper() == departmentCreate.Name.Trim().ToUpper()).FirstOrDefault();
-            if (department != null)
-            {
-                ModelState.AddModelError("", "Department already exists.");
-                return StatusCode(422, ModelState);
-            }
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
-            var departmentMap = _mapper.Map<Department>(departmentCreate);
-            departmentMap.Faculty = _facultyRepository.GetFaculty(facultyId);
-
-            if (!_departmentsRepository.CreateDepartment(departmentMap))
+            try
             {
-                ModelState.AddModelError("", "Something went wrong while trying to save.");
-                return StatusCode(500, ModelState);
+                var departmentExists = _unitOfWork.Departments.Get(d => d.Name.Trim().ToUpper() == createDepartment.Name.Trim().ToUpper());
+                if (departmentExists != null)
+                {
+                    ModelState.AddModelError("", "Department already exists.");
+                    return StatusCode(422, ModelState);
+                }
+                var newDepartment = _mapper.Map<Department>(createDepartment);
+                await _unitOfWork.Departments.Insert(newDepartment);
+                await _unitOfWork.Save();
+                return CreatedAtRoute("GetDepartment", new { id = newDepartment.DepartmentId }, newDepartment);
 
             }
-            return Ok("Department successfully created.");
+            catch (Exception ex)
+            {
+
+                _logger.LogError(ex, $"Something went wrong in the {nameof(CreateDepartment)}");
+                return StatusCode(500, "Internal Server Error. Please try again later.");
+            }
         }
-        [HttpPut("{departmentId}")]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [HttpPut("{id:int}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        public IActionResult UpdateDepartment([FromQuery] int facultyId, int departmentId, [FromBody] DepartmentDTO updatedDepartment)
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> UpdateDepartment(int id, [FromBody] DepartmentDTO departmentDTO)
         {
-            if (updatedDepartment == null)
+
+            if (!ModelState.IsValid || id < 1)
             {
                 return BadRequest(ModelState);
             }
-            if (!_facultyRepository.FacultyExists(facultyId))
+            try
             {
-                return NotFound();
+                var department = await _unitOfWork.Departments.Get(q => q.DepartmentId == id);
+                if (department == null)
+                {
+                    _logger.LogError($"Invalid UPDATE attempt {nameof(UpdateDepartment)}");
+                    return BadRequest("Submitted data is invalid.");
+                }
+                _mapper.Map(departmentDTO, department);
+                _unitOfWork.Departments.Update(department);
+                await _unitOfWork.Save();
+
+                return NoContent();
+
             }
-            if (!ModelState.IsValid)
+            catch (Exception ex)
             {
-                return BadRequest(ModelState);
+
+                _logger.LogError(ex, $"Something went wrong in the {nameof(UpdateDepartment)}");
+                return StatusCode(500, "Internal Server Error. Please try again later.");
             }
-            var departmentMap = _mapper.Map<Department>(updatedDepartment);
-            if (!_departmentsRepository.UpdateDepartment(facultyId, departmentMap))
-            {
-                ModelState.AddModelError("", "Something went wrong while trying to update the record.");
-                return StatusCode(500, ModelState);
-            }
-            return NoContent();
         }
         [HttpDelete("{departmentId}")]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
+
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public IActionResult DeleteDepartment(int departmentId)
+        public async Task<IActionResult> DeleteDepartment(int departmentId)
         {
-            if (!_departmentsRepository.DepartmentExists(departmentId))
+            if (departmentId < 1)
             {
-                return NotFound();
+                _logger.LogError($"Invalid DELETE attempt {nameof(DeleteDepartment)}");
+                return BadRequest();
+
             }
-            var departmentToDelete = _departmentsRepository.GetDepartment(departmentId);
-            if (!ModelState.IsValid)
+            try
             {
-                return BadRequest(ModelState);
+                var department = await _unitOfWork.Departments.Get(q => q.DepartmentId == departmentId);
+                if (department == null)
+                {
+                    _logger.LogError($"Invalid DELETE attempt {nameof(DeleteDepartment)}");
+                    return BadRequest("Submitted data is invalid");
+                }
+                await _unitOfWork.Departments.Delete(departmentId);
+                await _unitOfWork.Save();
+                return NoContent();
             }
-            if (!_departmentsRepository.DeleteDepartment(departmentToDelete))
+            catch (Exception ex)
             {
-                ModelState.AddModelError("", "Something went wrong while trying to delete the department.");
-                return StatusCode(500, ModelState);
+                _logger.LogError(ex, $"Something went wrong in the {nameof(DeleteDepartment)}");
+                return StatusCode(500, "Internal Server Error. Please try again later.");
             }
-            return NoContent();
         }
+
     }
 
 }

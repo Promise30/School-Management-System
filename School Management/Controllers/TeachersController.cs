@@ -13,156 +13,193 @@ namespace School_Management.Controllers
     [Authorize]
     public class TeachersController : ControllerBase
     {
-        private readonly ITeachersRepository _teachersRepository;
-        private readonly ICoursesRepository _coursesRepository;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
-        public TeachersController(ITeachersRepository teachersRepository, ICoursesRepository coursesRepository, IMapper mapper)
+        private readonly ILogger<TeachersController> _logger;
+        public TeachersController(IMapper mapper, IUnitOfWork unitOfWork, ILogger<TeachersController> logger)
         {
-            _coursesRepository = coursesRepository;
+
             _mapper = mapper;
-            _teachersRepository = teachersRepository;
+            _unitOfWork = unitOfWork;
+            _logger = logger;
         }
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public IActionResult GetTeachers()
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetTeachers()
         {
-            var teachers = _mapper.Map<List<TeacherDTO>>(_teachersRepository.GetTeachers());
-
-            if (teachers == null)
+            try
             {
-                return NotFound();
+                var teachers = await _unitOfWork.Teachers.GetAll();
+                var results = _mapper.Map<List<TeacherDTO>>(teachers);
+                return Ok(results);
             }
-
-            return Ok(teachers);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Something went wrong in the {nameof(GetTeachers)}");
+                return StatusCode(500, "Internal Server Error. Please try again later.");
+            }
         }
-        [HttpGet("{id}")]
+        [HttpGet("{id}", Name = "GetTeacher")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public IActionResult GetTeacher(int id)
+        public async Task<IActionResult> GetTeacher(int id)
         {
-            if (!ModelState.IsValid)
+            try
             {
-                return BadRequest(ModelState);
+                var teacher = await _unitOfWork.Teachers.Get(x => x.TeacherId == id);
+                if (teacher == null)
+                {
+                    return NotFound();
+                }
+                var result = _mapper.Map<TeacherDTO>(teacher);
+                return Ok(result);
             }
-            var teacher = _mapper.Map<TeacherDTO>(_teachersRepository.GetTeacher(id));
-            if (teacher == null)
+            catch (Exception ex)
             {
-                return NotFound();
+                _logger.LogError(ex, $"Something went wrong in the {nameof(GetTeacher)}");
+                return StatusCode(500, "Internal Server Error. Please try again later.");
             }
 
-            return Ok(teacher);
         }
         [HttpGet("{teacherId}/course")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public IActionResult GetCourseOfTeacher(int teacherId)
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetCourseOfTeacher(int teacherId)
         {
-            if (!_teachersRepository.TeacherExists(teacherId))
+            try
             {
-                return NotFound();
+                var teacherCourse = await _unitOfWork.Teachers.GetCourseOfATeacher(teacherId);
+                if (teacherCourse == null)
+                {
+                    return NotFound();
+                }
+                var results = _mapper.Map<List<CourseDTO>>(teacherCourse);
+                return Ok(results);
             }
-            var teacherCourse = _mapper.Map<CourseDTO>(_teachersRepository.GetCourseOfATeacher(teacherId));
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Something went wrong in the {nameof(GetCourseOfTeacher)}");
+                return StatusCode(500, "Internal Server Error. Please try again later.");
+            }
 
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-            return Ok(teacherCourse);
         }
-        [HttpGet("{teacherId}/Students")]
+
+        [HttpGet("{teacherId}/students")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public IActionResult GetStudentsOfATeacher(int teacherId)
+        public async Task<IActionResult> GetStudentsOfATeacher(int teacherId)
         {
-            if (!_teachersRepository.TeacherExists(teacherId))
+            try
             {
-                return NotFound();
+                var teacherStudents = await _unitOfWork.Teachers.GetStudentsOfATeacher(teacherId);
+                if (teacherStudents == null)
+                {
+                    return NotFound();
+                }
+                var results = _mapper.Map<List<StudentDTO>>(teacherStudents);
+                return Ok(results);
             }
-            var teacherStudents = _mapper.Map<List<StudentDTO>>(_teachersRepository.GetStudentsOfATeacher(teacherId));
-            if (!ModelState.IsValid)
+            catch (Exception ex)
             {
-                return BadRequest(ModelState);
+                _logger.LogError(ex, $"Something went wrong in the {nameof(GetStudentsOfATeacher)}");
+                return StatusCode(500, "Internal Server Error. Please try again later.");
             }
-            return Ok(teacherStudents);
+
         }
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public IActionResult CreateTeacher([FromQuery] int courseId, [FromBody] CreateTeacher teacherCreate)
+        public async Task<IActionResult> CreateTeacher([FromQuery] int courseId, [FromBody] CreateTeacher createTeacher)
         {
-            if (teacherCreate == null)
-            {
-                return BadRequest(ModelState);
-            }
-
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
-            var teacherMap = _mapper.Map<Teacher>(teacherCreate);
-            teacherMap.Course = _coursesRepository.GetCourse(courseId);
-
-            if (!_teachersRepository.CreateTeacher(teacherMap))
+            try
             {
-                ModelState.AddModelError("", "Something went wrong while trying to save.");
-                return StatusCode(500, ModelState);
+                var newTeacher = _mapper.Map<Teacher>(createTeacher);
+                newTeacher.Course = await _unitOfWork.Courses.Get(c => c.CourseId == courseId);
+                await _unitOfWork.Teachers.Insert(newTeacher);
+                await _unitOfWork.Save();
+                return CreatedAtRoute("GetTeacher", new { id = newTeacher.TeacherId }, newTeacher);
             }
-            return Ok("Teacher successfully created.");
+            catch (Exception ex)
+            {
+
+                _logger.LogError(ex, $"Something went wrong in the {nameof(CreateTeacher)}");
+                return StatusCode(500, "Internal Server Error. Please try again later.");
+            }
         }
         [HttpPut("{teacherId}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public IActionResult UpdateTeacher([FromQuery] int courseId, int teacherId, [FromBody] TeacherDTO updatedTeacher)
+        public async Task<IActionResult> UpdateTeacher([FromQuery] int courseId, int teacherId, [FromBody] TeacherDTO teacherDTO)
         {
-            if (updatedTeacher == null)
+            if (!ModelState.IsValid || teacherId < 1)
             {
                 return BadRequest(ModelState);
+            }
+            try
+            {
+                var teacher = await _unitOfWork.Teachers.Get(t => t.TeacherId == teacherId);
+                if (teacher == null)
+                {
+                    _logger.LogError($"Invalid UPDATE attempt {nameof(UpdateTeacher)}");
+                    return BadRequest("Submitted data is invalid.");
+                }
+                _mapper.Map(teacherDTO, teacher);
+                _unitOfWork.Teachers.Update(teacher);
+                await _unitOfWork.Save();
+
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+
+                _logger.LogError(ex, $"Something went wrong in the {nameof(UpdateTeacher)}");
+                return StatusCode(500, "Internal Server Error. Please try again later.");
             }
 
-            if (!_teachersRepository.TeacherExists(teacherId))
-            {
-                return NotFound();
-            }
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-            var teacherMap = _mapper.Map<Teacher>(updatedTeacher);
-            if (!_teachersRepository.UpdateTeacher(courseId, teacherMap))
-            {
-                ModelState.AddModelError("", "Something went wrong while trying to update the record.");
-                return StatusCode(500, ModelState);
-            }
-            return NoContent();
+
+
         }
+
         [HttpDelete("{teacherId}")]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public IActionResult DeleteTeacher(int teacherId)
+        public async Task<IActionResult> DeleteTeacher(int teacherId)
         {
-            if (!_teachersRepository.TeacherExists(teacherId))
+            if (teacherId < 1)
             {
-                return NotFound();
+                _logger.LogError($"Invalid DELETE attempt {nameof(DeleteTeacher)}");
+                return BadRequest();
+
             }
-            var teacherToDelete = _teachersRepository.GetTeacher(teacherId);
-            if (!ModelState.IsValid)
+            try
             {
-                return BadRequest(ModelState);
+                var teacher = await _unitOfWork.Teachers.Get(t => t.TeacherId == teacherId);
+                if (teacher == null)
+                {
+                    _logger.LogError($"Invalid DELETE attempt {nameof(DeleteTeacher)}");
+                    return BadRequest("Submitted data is invalid");
+                }
+                await _unitOfWork.Teachers.Delete(teacherId);
+                await _unitOfWork.Save();
+                return NoContent();
             }
-            if (!_teachersRepository.DeleteTeacher(teacherToDelete))
+            catch (Exception ex)
             {
-                ModelState.AddModelError("", "Something went wrong while trying to delete the teacher record.");
-                return StatusCode(500, ModelState);
+                _logger.LogError(ex, $"Something went wrong in the {nameof(DeleteTeacher)}");
+                return StatusCode(500, "Internal Server Error. Please try again later.");
             }
-            return NoContent();
         }
 
     }

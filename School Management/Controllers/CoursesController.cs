@@ -13,64 +13,84 @@ namespace School_Management.Controllers
     [Authorize]
     public class CoursesController : ControllerBase
     {
-        private readonly ICoursesRepository _coursesRepository;
-        private readonly IDepartmentsRepository _departmentsRepository;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
-
-        public CoursesController(ICoursesRepository coursesRepository, IDepartmentsRepository departmentsRepository, IMapper mapper)
+        private readonly ILogger<CoursesController> _logger;
+        public CoursesController(IMapper mapper, IUnitOfWork unitOfWork, ILogger<CoursesController> logger)
         {
-            _coursesRepository = coursesRepository;
-            _departmentsRepository = departmentsRepository;
-            _mapper = mapper;
 
+            _mapper = mapper;
+            _unitOfWork = unitOfWork;
+            _logger = logger;
         }
+
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public IActionResult GetCourses()
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetCourses()
         {
-            var courses = _mapper.Map<List<CourseDTO>>(_coursesRepository.GetCourses());
-            if (courses == null)
+            try
             {
-                return NotFound();
+                var courses = await _unitOfWork.Courses.GetAll();
+                if (courses == null)
+                {
+                    return NotFound();
+                }
+                var results = _mapper.Map<List<CourseDTO>>(courses);
+                return Ok(results);
             }
-            return Ok(courses);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Something went wrong in the {nameof(GetCourses)}");
+                return StatusCode(500, "Internal Server Error. Please try again later.");
+            }
+
         }
-        [HttpGet("{id}")]
+
+        [HttpGet("{id:int}", Name = "GetCourse")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public IActionResult GetCourse(int id)
+        public async Task<IActionResult> GetCourse(int id)
         {
-            if (!ModelState.IsValid)
+            try
             {
-                return BadRequest(ModelState);
+                var course = await _unitOfWork.Courses.Get(x => x.CourseId == id);
+                if (course == null)
+                {
+                    return NotFound();
+                }
+                var result = _mapper.Map<CourseDTO>(course);
+                return Ok(result);
             }
-            var course = _mapper.Map<CourseDTO>(_coursesRepository.GetCourse(id));
-
-            if (course == null)
+            catch (Exception ex)
             {
-                return NotFound();
+                _logger.LogError(ex, $"Something went wrong in the {nameof(GetCourse)}");
+                return StatusCode(500, "Internal Server Error. Please try again later.");
             }
-            return Ok(course);
         }
         [HttpGet("{courseId}/Students")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public IActionResult GetStudentsOfACourse(int courseId)
+        public async Task<IActionResult> GetStudentsOfACourse(int courseId)
         {
-            if (!ModelState.IsValid)
+            try
             {
-                return BadRequest(ModelState);
+                var courseStudents = await _unitOfWork.Courses.GetStudentsOfACourse(courseId);
+                if (courseStudents == null)
+                {
+                    return NotFound();
+                }
+                var results = _mapper.Map<List<StudentDTO>>(courseStudents);
+                return Ok(results);
             }
-            var students = _mapper.Map<List<StudentDTO>>(_coursesRepository.GetStudentsOfACourse(courseId));
-            if (students == null)
+            catch (Exception ex)
             {
-                return NotFound("No students enrolled in the course.");
+                _logger.LogError(ex, $"Something went wrong in the {nameof(GetStudentsOfACourse)}");
+                return StatusCode(500, "Internal Server Error. Please try again later.");
             }
-
-            return Ok(students);
 
 
         }
@@ -78,23 +98,23 @@ namespace School_Management.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public IActionResult GetTeachersOFACourse(int courseId)
+        public async Task<IActionResult> GetTeachersOFACourse(int courseId)
         {
-            if (!_coursesRepository.CourseExists(courseId))
+            try
             {
-                return NotFound();
+                var departmentTeachers = await _unitOfWork.Courses.GetTeachersOfACourse(courseId);
+                if (departmentTeachers == null)
+                {
+                    return NotFound();
+                }
+                var results = _mapper.Map<List<TeacherDTO>>(departmentTeachers);
+                return Ok(results);
             }
-            var courseTeachers = _mapper.Map<List<TeacherDTO>>(_coursesRepository.GetTeachersOfACourse(courseId));
-            if (courseTeachers == null)
+            catch (Exception ex)
             {
-                return NotFound();
+                _logger.LogError(ex, $"Something went wrong in the {nameof(GetTeachersOFACourse)}");
+                return StatusCode(500, "Internal Server Error. Please try again later.");
             }
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            return Ok(courseTeachers);
         }
 
         [HttpPost]
@@ -102,31 +122,27 @@ namespace School_Management.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public IActionResult CreateCourse([FromQuery] int departmentId, [FromBody] CreateCourse courseCreate)
+        public async Task<IActionResult> CreateCourse([FromQuery] int departmentId, [FromBody] CreateCourse createCourse)
         {
-            if (courseCreate == null)
-            {
-                return BadRequest(ModelState);
-            }
-            var course = _coursesRepository.GetCourses().Where(c => c.CourseCode.Trim().ToUpper() == courseCreate.CourseCode.Trim().ToUpper()).FirstOrDefault();
-            if (course != null)
-            {
-                ModelState.AddModelError("", "Course already exists.");
-                return StatusCode(422, ModelState);
-            }
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
-            var courseMap = _mapper.Map<Course>(courseCreate);
-            courseMap.Department = _departmentsRepository.GetDepartment(departmentId);
-            if (!_coursesRepository.CreateCourse(courseMap))
+            try
             {
-                ModelState.AddModelError("", "Something went wrong while trying to save.");
-                return StatusCode(500, ModelState);
-
+                var newCourse = _mapper.Map<Course>(createCourse);
+                newCourse.Department = await _unitOfWork.Departments.Get(d => d.DepartmentId == departmentId);
+                await _unitOfWork.Courses.Insert(newCourse);
+                await _unitOfWork.Save();
+                return CreatedAtRoute("GetCourse", new { id = newCourse.CourseId }, newCourse);
             }
-            return Ok("Course successfully created.");
+            catch (Exception ex)
+            {
+
+                _logger.LogError(ex, $"Something went wrong in the {nameof(CreateCourse)}");
+                return StatusCode(500, "Internal Server Error. Please try again later.");
+            }
+
         }
         [HttpPost("{courseId}/EnrollStudents")]
         [ProducesResponseType(StatusCodes.Status201Created)]
@@ -136,71 +152,83 @@ namespace School_Management.Controllers
         {
             try
             {
-                _coursesRepository.EnrollStudents(courseId, StudentIds);
+                _unitOfWork.Courses.EnrollStudents(courseId, StudentIds);
                 return Ok("Students enrolled in the course successfully.");
             }
-            catch (KeyNotFoundException ex)
+
+            catch (Exception ex)
             {
-                return NotFound(ex.Message);
+                _logger.LogError(ex, $"Something went wrong in the {nameof(EnrollStudentsInCourse)}");
+                return StatusCode(500, "Internal Server Error. Please try again later.");
+            }
+        }
+        [HttpPut("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> UpdateCourse([FromQuery] int departmentId, int id, [FromBody] CourseDTO courseDTO)
+        {
+
+            if (!ModelState.IsValid || id < 1)
+            {
+                return BadRequest(ModelState);
+            }
+            try
+            {
+                var course = await _unitOfWork.Courses.Get(q => q.CourseId == id);
+                if (course == null)
+                {
+                    _logger.LogError($"Invalid UPDATE attempt {nameof(UpdateCourse)}");
+                    return BadRequest("Submitted data is invalid.");
+                }
+                _mapper.Map(courseDTO, course);
+                _unitOfWork.Courses.Update(course);
+                await _unitOfWork.Save();
+
+                return NoContent();
+
             }
             catch (Exception ex)
             {
-                return StatusCode(500, "An error occurred while enrolling students for the course: " + ex.Message);
-            }
 
-
-        }
-        [HttpPut("{courseId}")]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public IActionResult UpdateCourse([FromQuery] int departmentId, int courseId, [FromBody] CourseDTO updatedCourse)
-        {
-            if (updatedCourse == null)
-            {
-                return BadRequest(ModelState);
+                _logger.LogError(ex, $"Something went wrong in the {nameof(UpdateCourse)}");
+                return StatusCode(500, "Internal Server Error. Please try again later.");
             }
-            if (!_coursesRepository.CourseExists(courseId))
-            {
-                return NotFound("Course not found.");
-            }
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-            var courseMap = _mapper.Map<Course>(updatedCourse);
-            if (!_coursesRepository.UpdateCourse(departmentId, courseMap))
-            {
-                ModelState.AddModelError("", "Something went wrong while trying to update the record.");
-                return StatusCode(500, ModelState);
-            }
-            return NoContent();
-
         }
         [HttpDelete("{courseId}")]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
+
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public IActionResult DeleteCourse(int courseId)
+        public async Task<IActionResult> DeleteCourse(int courseId)
         {
-            if (!_coursesRepository.CourseExists(courseId))
+            if (courseId < 1)
             {
-                return NotFound("Course not found.");
+                _logger.LogError($"Invalid DELETE attempt {nameof(DeleteCourse)}");
+                return BadRequest();
+
             }
-            var courseToDelete = _coursesRepository.GetCourse(courseId);
-            if (!ModelState.IsValid)
+            try
             {
-                return BadRequest(ModelState);
+                var course = await _unitOfWork.Courses.Get(q => q.CourseId == courseId);
+                if (course == null)
+                {
+                    _logger.LogError($"Invalid DELETE attempt {nameof(DeleteCourse)}");
+                    return BadRequest("Submitted data is invalid");
+                }
+                await _unitOfWork.Courses.Delete(courseId);
+                await _unitOfWork.Save();
+                return NoContent();
             }
-            if (!_coursesRepository.DeleteCourse(courseToDelete))
+            catch (Exception ex)
             {
-                ModelState.AddModelError("", "Something went wrong while trying to delete the course.");
-                return StatusCode(500, ModelState);
+                _logger.LogError(ex, $"Something went wrong in the {nameof(DeleteCourse)}");
+                return StatusCode(500, "Internal Server Error. Please try again later.");
             }
-            return NoContent();
         }
 
     }
+
+
+
+
 }

@@ -13,153 +13,156 @@ namespace School_Management.Controllers
     [Authorize]
     public class FacultyController : ControllerBase
     {
-        private readonly IFacultyRepository _facultyRepository;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
-        public FacultyController(IFacultyRepository facultyRepository, IMapper mapper)
+        private readonly ILogger<FacultyController> _logger;
+        public FacultyController(IMapper mapper, IUnitOfWork unitOfWork, ILogger<FacultyController> logger)
         {
-            _facultyRepository = facultyRepository;
+
             _mapper = mapper;
+            _unitOfWork = unitOfWork;
+            _logger = logger;
         }
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-
-        public IActionResult GetFaculties()
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> GetFaculties()
         {
-            var faculties = _mapper.Map<List<FacultyDTO>>(_facultyRepository.GetFaculties());
-
-            if (faculties == null)
+            try
             {
-                return NotFound();
+                var faculties = await _unitOfWork.Faculties.GetAll();
+                var results = _mapper.Map<List<FacultyDTO>>(faculties);
+                return Ok(results);
             }
-            return Ok(faculties);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Something went wrong in the {nameof(GetFaculties)}");
+                return StatusCode(500, "Internal Server Error. Please try again later.");
+            }
         }
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}", Name = "GetFaculty")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public IActionResult GetFaculty(int id)
+        public async Task<IActionResult> GetFaculty(int id)
         {
-            if (!ModelState.IsValid)
+            try
             {
-                return BadRequest(ModelState);
+                var faculty = await _unitOfWork.Faculties.Get(x => x.FacultyId == id, new List<string> { "Departments" });
+                if (faculty == null)
+                {
+                    return NotFound();
+                }
+                var result = _mapper.Map<FacultyDTO>(faculty);
+                return Ok(result);
             }
-            var faculty = _mapper.Map<FacultyDTO>(_facultyRepository.GetFaculty(id));
-            if (faculty == null)
+            catch (Exception ex)
             {
-
-                return NotFound();
+                _logger.LogError(ex, $"Something went wrong in the {nameof(GetFaculty)}");
+                return StatusCode(500, "Internal Server Error. Please try again later.");
             }
-
-
-            return Ok(faculty);
         }
-        [HttpGet("{facultyId}/Departments")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public IActionResult GetDepartmentsOfAFaculty(int facultyId)
-        {
-            if (!_facultyRepository.FacultyExists(facultyId))
-            {
-                return NotFound();
-            }
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-            var departments = _mapper.Map<List<DepartmentDTO>>(_facultyRepository.GetDepartmentsOfFaculty(facultyId));
-            if (departments == null)
-            {
-                return NotFound();
-            }
-
-
-            return Ok(departments);
-
-        }
-
 
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public IActionResult CreateFaculty([FromBody] CreateFaculty facultyCreate)
+        public async Task<IActionResult> CreateFaculty([FromBody] CreateFaculty createFaculty)
         {
-            if (facultyCreate == null)
-            {
-                return BadRequest(ModelState);
-            }
-            var existingFaculty = _facultyRepository.GetFaculties().Where(f => f.Name.Trim().ToUpper() == facultyCreate.Name.Trim().ToUpper()).FirstOrDefault();
-            if (existingFaculty != null)
-            {
-                ModelState.AddModelError("", "Faculty already exists.");
-                return StatusCode(422, ModelState);
-            }
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
-            var facultyMap = _mapper.Map<Faculty>(facultyCreate);
-            if (!_facultyRepository.CreateFaculty(facultyMap))
+            try
             {
-                ModelState.AddModelError("", "Something went wrong while trying to save.");
-                return StatusCode(500, ModelState);
+                var facultyExists = _unitOfWork.Faculties.Get(d => d.Name.Trim().ToUpper() == createFaculty.Name.Trim().ToUpper());
+                if (facultyExists != null)
+                {
+                    ModelState.AddModelError("", "Faculty already exists.");
+                    return StatusCode(422, ModelState);
+                }
+                var newFaculty = _mapper.Map<Faculty>(createFaculty);
+                await _unitOfWork.Faculties.Insert(newFaculty);
+                await _unitOfWork.Save();
+                return CreatedAtRoute("GetFaculty", new { id = newFaculty.FacultyId }, newFaculty);
+
             }
-            return Ok("Faculty created successfully.");
+            catch (Exception ex)
+            {
+
+                _logger.LogError(ex, $"Something went wrong in the {nameof(CreateFaculty)}");
+                return StatusCode(500, "Internal Server Error. Please try again later.");
+            }
         }
-        [HttpPut("{facultyId}")]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+
+
+        [HttpPut("{id:int}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        public IActionResult UpdateFaculty(int facultyId, [FromBody] FacultyDTO updateFaculty)
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> UpdateFaculty(int id, [FromBody] FacultyDTO facultyDTO)
         {
-            if (updateFaculty == null)
+
+            if (!ModelState.IsValid || id < 1)
             {
                 return BadRequest(ModelState);
             }
-            if (!_facultyRepository.FacultyExists(facultyId))
+            try
             {
-                return NotFound("Faculty not found.");
+                var faculty = await _unitOfWork.Faculties.Get(q => q.FacultyId == id);
+                if (faculty == null)
+                {
+                    _logger.LogError($"Invalid UPDATE attempt {nameof(UpdateFaculty)}");
+                    return BadRequest("Submitted data is invalid.");
+                }
+                _mapper.Map(facultyDTO, faculty);
+                _unitOfWork.Faculties.Update(faculty);
+                await _unitOfWork.Save();
+
+                return NoContent();
+
             }
-            if (!ModelState.IsValid)
+            catch (Exception ex)
             {
-                return BadRequest(ModelState);
+
+                _logger.LogError(ex, $"Something went wrong in the {nameof(UpdateFaculty)}");
+                return StatusCode(500, "Internal Server Error. Please try again later.");
             }
-            var facultyMap = _mapper.Map<Faculty>(updateFaculty);
-            if (!_facultyRepository.UpdateFaculty(facultyMap))
-            {
-                ModelState.AddModelError("", "Something went wrong while trying to update the faculty.");
-                return StatusCode(500, ModelState);
-            }
-            return NoContent();
         }
 
         [HttpDelete("{facultyId}")]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public IActionResult DeleteFaculty(int facultyId)
+        public async Task<IActionResult> DeleteFaculty(int facultyId)
         {
-            if (!_facultyRepository.FacultyExists(facultyId))
+            if (facultyId < 1)
             {
-                return NotFound("Faculty not found.");
+                _logger.LogError($"Invalid DELETE attempt {nameof(DeleteFaculty)}");
+                return BadRequest();
+
             }
-            var facultyToDelete = _facultyRepository.GetFaculty(facultyId);
-            if (!ModelState.IsValid)
+            try
             {
-                return BadRequest(ModelState);
+                var faculty = await _unitOfWork.Faculties.Get(q => q.FacultyId == facultyId);
+                if (faculty == null)
+                {
+                    _logger.LogError($"Invalid DELETE attempt {nameof(DeleteFaculty)}");
+                    return BadRequest("Submitted data is invalid");
+                }
+                await _unitOfWork.Faculties.Delete(facultyId);
+                await _unitOfWork.Save();
+                return NoContent();
             }
-            if (!_facultyRepository.DeleteFaculty(facultyToDelete))
+            catch (Exception ex)
             {
-                ModelState.AddModelError("", "Something went wrong while trying to delete the faculty.");
-                return StatusCode(500, ModelState);
+                _logger.LogError(ex, $"Something went wrong in the {nameof(DeleteFaculty)}");
+                return StatusCode(500, "Internal Server Error. Please try again later.");
             }
-            return NoContent();
         }
+
 
     }
 }
