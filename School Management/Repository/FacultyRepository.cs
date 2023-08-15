@@ -4,61 +4,15 @@ using School_Management.Models;
 
 namespace School_Management.Repository
 {
-    public class FacultyRepository : IFacultyRepository
+    public class FacultyRepository : GenericRepository<Faculty>, IFacultyRepository
     {
-        private readonly ApplicationDbContext _dbContext;
 
-        public FacultyRepository(ApplicationDbContext dbContext)
+        public FacultyRepository(ApplicationDbContext dbContext) : base(dbContext)
         {
-            _dbContext = dbContext;
         }
 
-        public bool CreateFaculty(Faculty faculty)
-        {
-            _dbContext.Add(faculty);
-            return Save();
-        }
 
-        public bool DeleteFaculty(int facultyId)
-        {
-            throw new NotImplementedException();
-        }
 
-        public bool DeleteFaculty(Faculty faculty)
-        {
-            _dbContext.Remove(faculty);
-            return Save();
-        }
-
-        public bool FacultyExists(int facultyId)
-        {
-            return _dbContext.Faculties.Any(f => f.FacultyId == facultyId);
-        }
-
-        public ICollection<Department> GetDepartmentsOfFaculty(int facultyId)
-        {
-            return _dbContext.Departments.Where(d => d.Faculty.FacultyId == facultyId).ToList();
-        }
-
-        public ICollection<Faculty> GetFaculties()
-        {
-            return _dbContext.Faculties.ToList();
-        }
-
-        public Faculty GetFaculty(int facultyId)
-        {
-            return _dbContext.Faculties.Where(f => f.FacultyId == facultyId).FirstOrDefault();
-        }
-
-        public bool Save()
-        {
-            return _dbContext.SaveChanges() > 0 ? true : false;
-        }
-
-        public bool UpdateFaculty(Faculty faculty)
-        {
-            _dbContext.Update(faculty);
-            return Save();
-        }
     }
+
 }

@@ -1,64 +1,27 @@
-﻿using School_Management.Data;
+﻿using Microsoft.EntityFrameworkCore;
+using School_Management.Data;
 using School_Management.Interfaces;
 using School_Management.Models;
 
 namespace School_Management.Repository
 {
-    public class TeachersRepository : ITeachersRepository
+    public class TeachersRepository : GenericRepository<Teacher>, ITeachersRepository
     {
-        private readonly ApplicationDbContext _dbContext;
-        public TeachersRepository(ApplicationDbContext dbContext)
+        public TeachersRepository(ApplicationDbContext dbContext) : base(dbContext)
         {
-            _dbContext = dbContext;
-        }
-        public bool CreateTeacher(Teacher teacher)
-        {
-            _dbContext.Add(teacher);
-            return Save();
-        }
-        public bool DeleteTeacher(Teacher teacher)
-        {
-            _dbContext.Remove(teacher);
-            return Save();
-        }
-        public Course GetCourseOfATeacher(int teacherId)
-        {
-            return _dbContext.Teachers
-                    .Where(t => t.TeacherId == teacherId)
-                    .Select(t => t.Course)
-                    .FirstOrDefault();
         }
 
-        public ICollection<Student> GetStudentsOfATeacher(int teacherId)
+        public async Task<Course> GetCourseOfATeacher(int teacherId)
         {
-            return _dbContext.Students
-                     .Where(s => s.CourseStudents.Any(cs => cs.Course.Teachers.Any(t => t.TeacherId == teacherId))).ToList();
+            return await _dbContext.Teachers.Where(t => t.TeacherId == teacherId).Select(t => t.Course).FirstOrDefaultAsync(); ;
         }
 
-        public Teacher GetTeacher(int teacherId)
+        public async Task<ICollection<Student>> GetStudentsOfATeacher(int teacherId)
         {
-            return _dbContext.Teachers.Where(t => t.TeacherId == teacherId).FirstOrDefault();
+            return await _dbContext.Students.Where(s => s.CourseStudents.Any(cs => cs.Course.Teachers.Any(t => t.TeacherId == teacherId))).ToListAsync();
         }
 
-        public ICollection<Teacher> GetTeachers()
-        {
-            return _dbContext.Teachers.ToList();
-        }
 
-        public bool Save()
-        {
-            return _dbContext.SaveChanges() > 0 ? true : false;
-        }
 
-        public bool TeacherExists(int teacherId)
-        {
-            return _dbContext.Teachers.Any(t => t.TeacherId == teacherId);
-        }
-
-        public bool UpdateTeacher(int courseId, Teacher teacher)
-        {
-            _dbContext.Update(teacher);
-            return Save();
-        }
     }
 }

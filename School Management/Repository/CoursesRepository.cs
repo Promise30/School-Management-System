@@ -5,29 +5,10 @@ using School_Management.Models;
 
 namespace School_Management.Repository
 {
-    public class CoursesRepository : ICoursesRepository
+    public class CoursesRepository : GenericRepository<Course>, ICoursesRepository
     {
-        private readonly ApplicationDbContext _dbContext;
-
-        public CoursesRepository(ApplicationDbContext dbContext)
+        public CoursesRepository(ApplicationDbContext dbContext) : base(dbContext)
         {
-            _dbContext = dbContext;
-        }
-        public bool CourseExists(int courseId)
-        {
-            return _dbContext.Courses.Any(c => c.CourseId == courseId);
-        }
-
-        public bool CreateCourse(Course course)
-        {
-            _dbContext.Add(course);
-            return Save();
-        }
-
-        public bool DeleteCourse(Course course)
-        {
-            _dbContext.Remove(course);
-            return Save();
         }
 
         public void EnrollStudents(int courseId, List<int> studentIds)
@@ -77,60 +58,32 @@ namespace School_Management.Repository
 
         }
 
-        public Course GetCourse(int courseId)
+
+
+
+        public async Task<ICollection<Teacher>> GetTeachersOfACourse(int courseId)
         {
 
-            return _dbContext.Courses.Where(c => c.CourseId == courseId).FirstOrDefault();
+
+            return await _dbContext.Teachers.Where(t => t.Course.CourseId == courseId).ToListAsync();
+
         }
 
-        public ICollection<Course> GetCourses()
+        public async Task<ICollection<Student>> GetStudentsOfACourse(int courseId)
         {
-            return _dbContext.Courses.ToList();
-        }
-
-        public Department GetDepartmentOfACourse(int courseId)
-        {
-            return _dbContext.Courses.Include(d => d.Department).FirstOrDefault(c => c.CourseId == courseId).Department;
-        }
-
-        public ICollection<Student> GetStudentsOfACourse(int courseId)
-        {
-            var course = _dbContext.Courses
-         .Include(c => c.CourseStudents)
-         .ThenInclude(cs => cs.Student)
-         .FirstOrDefault(c => c.CourseId == courseId);
+            var course = await _dbContext.Courses.Include(c => c.CourseStudents).ThenInclude(cs => cs.Student).FirstOrDefaultAsync(c => c.CourseId == courseId);
 
             if (course == null)
             {
 
-                return new List<Student>(); // Return an empty list when the course is not found
+                return new List<Student>();
             }
 
-            var studentsTakingCourse = course.CourseStudents
-                .Select(cs => cs.Student)
-                .ToList();
+            var studentsTakingCourse = course.CourseStudents.Select(cs => cs.Student).ToList();
 
             return studentsTakingCourse;
-
         }
 
-        public ICollection<Teacher> GetTeachersOfACourse(int courseId)
-        {
 
-
-            return _dbContext.Teachers.Where(t => t.Course.CourseId == courseId).ToList();
-
-        }
-
-        public bool Save()
-        {
-            return _dbContext.SaveChanges() > 0 ? true : false;
-        }
-
-        public bool UpdateCourse(int departmentId, Course course)
-        {
-            _dbContext.Update(course);
-            return Save();
-        }
     }
 }

@@ -7,7 +7,7 @@ namespace School_Management.Repository
 {
     public class GenericRepository<T> : IGenericRepository<T> where T : class
     {
-        private readonly ApplicationDbContext _dbContext;
+        public readonly ApplicationDbContext _dbContext;
         private readonly DbSet<T> _db;
 
         public GenericRepository(ApplicationDbContext dbContext)
@@ -70,5 +70,7 @@ namespace School_Management.Repository
             _dbContext.Entry(entity).State = EntityState.Modified;
 
         }
+
+
     }
 }
