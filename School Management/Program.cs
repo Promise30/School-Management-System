@@ -86,6 +86,7 @@ builder.Services.AddScoped<ITeachersRepository, TeachersRepository>();
 builder.Services.AddScoped<IDepartmentsRepository, DepartmentsRepository>();
 builder.Services.AddScoped<IFacultyRepository, FacultyRepository>();
 builder.Services.AddScoped<IAuthManager, AuthManager>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 
 var app = builder.Build();
